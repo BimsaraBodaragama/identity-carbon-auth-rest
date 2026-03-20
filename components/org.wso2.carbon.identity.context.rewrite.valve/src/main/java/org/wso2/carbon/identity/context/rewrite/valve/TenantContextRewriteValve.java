@@ -178,6 +178,10 @@ public class TenantContextRewriteValve extends ValveBase {
                     String resolvedRootTenantDomain =
                             resolveAndValidateOpenApiTenantOrg(tenantDomainFromUrl, accessingOrgId, response);
                     if (resolvedRootTenantDomain == null) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Invalid tenant and organization combination. Tenant domain from URL: "
+                                    + tenantDomainFromUrl + ", organization ID: " + accessingOrgId);
+                        }
                         return;
                     }
                     PrivilegedCarbonContext.getThreadLocalCarbonContext()
@@ -578,6 +582,9 @@ public class TenantContextRewriteValve extends ValveBase {
             return null;
         }
         try {
+            if (log.isDebugEnabled()) {
+                log.debug("Attempting to resolve tenant domain for organization ID: " + orgId);
+            }
             String primaryOrgId = organizationManager.getPrimaryOrganizationId(orgId);
             if (StringUtils.isBlank(primaryOrgId)) {
                 if (log.isDebugEnabled()) {
