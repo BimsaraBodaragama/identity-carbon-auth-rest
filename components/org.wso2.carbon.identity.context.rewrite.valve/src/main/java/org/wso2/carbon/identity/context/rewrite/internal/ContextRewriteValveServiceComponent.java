@@ -104,7 +104,7 @@ public class ContextRewriteValveServiceComponent {
     @Reference(
             name = "organization.mgt.service",
             service = OrganizationManager.class,
-            cardinality = ReferenceCardinality.OPTIONAL,
+            cardinality = ReferenceCardinality.MANDATORY,
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetOrganizationManager"
     )

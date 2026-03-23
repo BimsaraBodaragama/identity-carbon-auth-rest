@@ -67,7 +67,7 @@ public class TenantContextRewriteValve extends ValveBase {
 
     private static List<RewriteContext> contextsToRewrite;
     private static List<OrganizationRewriteContext> contextsToRewriteInTenantPerspective;
-    private static List<OrganizationRewriteContext> openApiContextsToRewriteInTenantPerspective;
+    private static List<OrganizationRewriteContext> orgContextsToRewriteInTenantQualifiedPaths;
     private static List<String> contextListToOverwriteDispatch;
     private static List<String> ignorePathListForOverwriteDispatch;
     private static List<String> organizationRoutingOnlySupportedAPIPaths;
@@ -83,7 +83,7 @@ public class TenantContextRewriteValve extends ValveBase {
         // Initialize the tenant context rewrite valve.
         contextsToRewrite = getContextsToRewrite();
         contextsToRewriteInTenantPerspective = getContextsToRewriteInTenantPerspective();
-        openApiContextsToRewriteInTenantPerspective = getOpenApiContextsToRewriteInTenantPerspective();
+        orgContextsToRewriteInTenantQualifiedPaths = getOrgContextsToRewriteInTenantQualifiedPaths();
         contextListToOverwriteDispatch = getContextListToOverwriteDispatchLocation();
         ignorePathListForOverwriteDispatch = getIgnorePathListForOverwriteDispatch();
         isTenantQualifiedUrlsEnabled = isTenantQualifiedUrlsEnabled();
@@ -164,11 +164,11 @@ public class TenantContextRewriteValve extends ValveBase {
             }
         }
 
-        openApiOuterLoop:
-        for (OrganizationRewriteContext context : openApiContextsToRewriteInTenantPerspective) {
-            Pattern patternOpenApiTenantPerspective =
+        orgQualifiedPathsOuterLoop:
+        for (OrganizationRewriteContext context : orgContextsToRewriteInTenantQualifiedPaths) {
+            Pattern patternOrgQualifiedPath =
                     Pattern.compile("^/t/[^/]+/o/[a-f0-9\\-]+?" + context.getContext());
-            if (patternOpenApiTenantPerspective.matcher(requestURI).find()) {
+            if (patternOrgQualifiedPath.matcher(requestURI).find()) {
                 if (CollectionUtils.isEmpty(context.getSubPaths())) {
                     isContextRewrite = true;
                     isWebApp = context.isWebApp();
@@ -176,7 +176,7 @@ public class TenantContextRewriteValve extends ValveBase {
                     String tenantDomainFromUrl = extractTenantDomainFromUrl(requestURI);
                     String accessingOrgId = extractOrganizationIdFromUrl(requestURI);
                     String resolvedRootTenantDomain =
-                            resolveAndValidateOpenApiTenantOrg(tenantDomainFromUrl, accessingOrgId, response);
+                            resolveAndValidateTenantQualifiedOrg(tenantDomainFromUrl, accessingOrgId, response);
                     if (resolvedRootTenantDomain == null) {
                         if (log.isDebugEnabled()) {
                             log.debug("Invalid tenant and organization combination. Tenant domain from URL: "
@@ -191,7 +191,7 @@ public class TenantContextRewriteValve extends ValveBase {
                     PrivilegedCarbonContext.getThreadLocalCarbonContext().setAccessingOrganizationId(accessingOrgId);
                     if (log.isDebugEnabled()) {
                         log.debug("Set tenant domain: " + resolvedRootTenantDomain + " and accessing organization ID: "
-                                + accessingOrgId + " for open API context: " + contextToForward);
+                                + accessingOrgId + " for tenant-qualified org context: " + contextToForward);
                     }
                     break;
                 }
@@ -203,7 +203,7 @@ public class TenantContextRewriteValve extends ValveBase {
                         String tenantDomainFromUrl = extractTenantDomainFromUrl(requestURI);
                         String accessingOrgId = extractOrganizationIdFromUrl(requestURI);
                         String resolvedRootTenantDomain =
-                                resolveAndValidateOpenApiTenantOrg(tenantDomainFromUrl, accessingOrgId, response);
+                                resolveAndValidateTenantQualifiedOrg(tenantDomainFromUrl, accessingOrgId, response);
                         if (resolvedRootTenantDomain == null) {
                             return;
                         }
@@ -216,9 +216,9 @@ public class TenantContextRewriteValve extends ValveBase {
                         if (log.isDebugEnabled()) {
                             log.debug("Set tenant domain: " + resolvedRootTenantDomain
                                     + " and accessing organization ID: " + accessingOrgId
-                                    + " for open API context: " + contextToForward);
+                                    + " for tenant-qualified org context: " + contextToForward);
                         }
-                        break openApiOuterLoop;
+                        break orgQualifiedPathsOuterLoop;
                     }
                 }
             }
@@ -496,20 +496,20 @@ public class TenantContextRewriteValve extends ValveBase {
         return Pattern.compile("^/t/[^/]+/o/[a-f0-9\\-]+?").matcher(requestURI).find();
     }
 
-    private List<OrganizationRewriteContext> getOpenApiContextsToRewriteInTenantPerspective() {
+    private List<OrganizationRewriteContext> getOrgContextsToRewriteInTenantQualifiedPaths() {
 
         List<OrganizationRewriteContext> organizationRewriteContexts = new ArrayList<>();
         Map<String, Object> configuration = IdentityConfigParser.getInstance().getConfiguration();
         Object webAppBasePathContexts = configuration.get(
-                "OpenApiOrgContextsToRewriteInTenantPerspective.WebApp.Context.BasePath");
+                "OrgContextsToRewriteInTenantQualifiedPaths.WebApp.Context.BasePath");
         setOrganizationRewriteContexts(organizationRewriteContexts, webAppBasePathContexts, true);
 
         Object webAppSubPathContexts = configuration.get(
-                "OpenApiOrgContextsToRewriteInTenantPerspective.WebApp.Context.SubPaths.Path");
+                "OrgContextsToRewriteInTenantQualifiedPaths.WebApp.Context.SubPaths.Path");
         setSubPathContexts(organizationRewriteContexts, webAppSubPathContexts);
 
         Object servletBasePathContexts = configuration.get(
-                "OpenApiOrgContextsToRewriteInTenantPerspective.Servlet.Context");
+                "OrgContextsToRewriteInTenantQualifiedPaths.Servlet.Context");
         setOrganizationRewriteContexts(organizationRewriteContexts, servletBasePathContexts, false);
 
         return organizationRewriteContexts;
@@ -539,7 +539,7 @@ public class TenantContextRewriteValve extends ValveBase {
      * Validates that the tenant domain in the URL matches the root tenant resolved from the organization ID.
      * Returns the resolved root tenant domain if valid, or null if a 400 response was already written.
      */
-    private String resolveAndValidateOpenApiTenantOrg(String tenantDomainFromUrl, String orgId, Response response)
+    private String resolveAndValidateTenantQualifiedOrg(String tenantDomainFromUrl, String orgId, Response response)
             throws IOException {
 
         if (StringUtils.isBlank(tenantDomainFromUrl) || StringUtils.isBlank(orgId)) {
