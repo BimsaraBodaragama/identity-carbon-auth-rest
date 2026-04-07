@@ -234,7 +234,7 @@ public class TenantContextRewriteValve extends ValveBase {
                                     .setApplicationResidentOrganizationId(accessingOrgId);
                             PrivilegedCarbonContext.getThreadLocalCarbonContext()
                                     .setAccessingOrganizationId(accessingOrgId);
-                        } catch (Exception e) {
+                        } catch (RuntimeException e) {
                             PrivilegedCarbonContext.endTenantFlow();
                             isOrgQualifiedPathFlow = false;
                             throw e;
