@@ -188,15 +188,22 @@ public class TenantContextRewriteValve extends ValveBase {
                         }
                         return;
                     }
+                    isOrgQualifiedPathFlow = true;
                     effectiveTenantDomain = subOrgTenantDomain;
                     urlTenantDomain = tenantDomainFromUrl;
                     PrivilegedCarbonContext.startTenantFlow();
-                    PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                            .setTenantDomain(subOrgTenantDomain, true);
-                    PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                            .setApplicationResidentOrganizationId(accessingOrgId);
-                    PrivilegedCarbonContext.getThreadLocalCarbonContext().setAccessingOrganizationId(accessingOrgId);
-                    isOrgQualifiedPathFlow = true;
+                    try {
+                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                .setTenantDomain(subOrgTenantDomain, true);
+                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                .setApplicationResidentOrganizationId(accessingOrgId);
+                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                .setAccessingOrganizationId(accessingOrgId);
+                    } catch (Exception e) {
+                        PrivilegedCarbonContext.endTenantFlow();
+                        isOrgQualifiedPathFlow = false;
+                        throw e;
+                    }
                     if (log.isDebugEnabled()) {
                         log.debug("Set sub-org tenant domain: " + subOrgTenantDomain
                                 + " and accessing organization ID: " + accessingOrgId
@@ -216,16 +223,22 @@ public class TenantContextRewriteValve extends ValveBase {
                         if (subOrgTenantDomain == null) {
                             return;
                         }
+                        isOrgQualifiedPathFlow = true;
                         effectiveTenantDomain = subOrgTenantDomain;
                         urlTenantDomain = tenantDomainFromUrl;
                         PrivilegedCarbonContext.startTenantFlow();
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                .setTenantDomain(subOrgTenantDomain, true);
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                .setApplicationResidentOrganizationId(accessingOrgId);
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                .setAccessingOrganizationId(accessingOrgId);
-                        isOrgQualifiedPathFlow = true;
+                        try {
+                            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                    .setTenantDomain(subOrgTenantDomain, true);
+                            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                    .setApplicationResidentOrganizationId(accessingOrgId);
+                            PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                                    .setAccessingOrganizationId(accessingOrgId);
+                        } catch (Exception e) {
+                            PrivilegedCarbonContext.endTenantFlow();
+                            isOrgQualifiedPathFlow = false;
+                            throw e;
+                        }
                         if (log.isDebugEnabled()) {
                             log.debug("Set sub-org tenant domain: " + subOrgTenantDomain
                                     + " and accessing organization ID: " + accessingOrgId
