@@ -27,6 +27,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -37,7 +38,6 @@ import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnExc
 import org.wso2.carbon.identity.oauth2.dto.OAuth2ClientApplicationDTO;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
-import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -60,14 +60,12 @@ import static org.wso2.carbon.identity.oauth.common.OAuthConstants.TENANT_NAME_F
 public class OAuthAppTenantResolverValve extends ValveBase {
 
     private static final Log LOG = LogFactory.getLog(OAuthAppTenantResolverValve.class);
-    private static final int INVALID_TENANT_ID = -1;
     private static String oAuthServerBaseURL = null;
     private static String oAuth2ServerBaseURL = null;
 
     @Override
     public void invoke(Request request, Response response) throws IOException, ServletException {
 
-        boolean newTenantFlowStarted = false;
         try {
             String clientId = isOAuthRequest(request) ? extractClientIDFromOauthRequest(request)
                     : extractClientIDFromAuthzHeader(request);
@@ -95,50 +93,18 @@ public class OAuthAppTenantResolverValve extends ValveBase {
                 appTenant = extractTenantDomainFromUserName(request);
             }
 
-            int appTenantId = getTenantId(appTenant);
-            if (appTenantId != INVALID_TENANT_ID) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Starting tenant flow for tenant: " + appTenant);
-                }
+            if (StringUtils.isNotEmpty(appTenant)) {
                 IdentityUtil.threadLocalProperties.get().put(TENANT_NAME_FROM_CONTEXT, appTenant);
-                PrivilegedCarbonContext.startTenantFlow();
                 PrivilegedCarbonContext carbonContext = PrivilegedCarbonContext.getThreadLocalCarbonContext();
-                carbonContext.setTenantId(appTenantId);
                 carbonContext.setTenantDomain(appTenant);
-                newTenantFlowStarted = true;
+                carbonContext.setTenantId(IdentityTenantUtil.getTenantId(appTenant));
+                FrameworkUtils.startTenantFlow(appTenant);
             }
 
             getNext().invoke(request, response);
         } finally {
             // Clear thread local tenant name.
             unsetThreadLocalContextTenantName();
-            // End tenant flow if started in this valve.
-            if (newTenantFlowStarted) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Ending tenant flow for tenant: " +
-                            PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain());
-                }
-                PrivilegedCarbonContext.endTenantFlow();
-            }
-        }
-    }
-
-    private int getTenantId(String tenantDomain) {
-
-        if (StringUtils.isEmpty(tenantDomain)) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Tenant domain is empty.");
-            }
-            return INVALID_TENANT_ID;
-        }
-
-        try {
-            return IdentityTenantUtil.getTenantId(tenantDomain);
-        } catch (Exception e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Could not resolve tenant Id for tenant domain: " + tenantDomain, e);
-            }
-            return INVALID_TENANT_ID;
         }
     }
 
@@ -150,7 +116,8 @@ public class OAuthAppTenantResolverValve extends ValveBase {
      */
     private String extractClientIDFromOauthRequest(Request request) {
 
-        String clientId = request.getParameter(CLIENT_ID);
+        String clientId = "";
+        clientId = request.getParameter(CLIENT_ID);
 
         if (StringUtils.isEmpty(clientId) && isOAuth10ARequest(request)) {
             clientId = request.getParameter(OAUTH_CONSUMER_KEY);
@@ -272,7 +239,7 @@ public class OAuthAppTenantResolverValve extends ValveBase {
             }
         }
 
-        return MultitenantUtils.getTenantDomain(tenantQualifiedUsername);
+        return StringUtils.substringAfter(tenantQualifiedUsername, "@");
     }
 
     /**
