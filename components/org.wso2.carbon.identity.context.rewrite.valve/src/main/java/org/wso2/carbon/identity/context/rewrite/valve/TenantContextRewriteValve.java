@@ -191,22 +191,8 @@ public class TenantContextRewriteValve extends ValveBase {
                     isOrgQualifiedPathFlow = true;
                     effectiveTenantDomain = subOrgTenantDomain;
                     urlTenantDomain = tenantDomainFromUrl;
-                    PrivilegedCarbonContext.startTenantFlow();
-                    try {
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                .setTenantDomain(subOrgTenantDomain, true);
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                .setApplicationResidentOrganizationId(accessingOrgId);
-                        PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                .setAccessingOrganizationId(accessingOrgId);
-                    } catch (RuntimeException e) {
-                        PrivilegedCarbonContext.endTenantFlow();
-                        isOrgQualifiedPathFlow = false;
-                        throw e;
-                    }
                     if (log.isDebugEnabled()) {
-                        log.debug("Set sub-org tenant domain: " + subOrgTenantDomain
-                                + " and accessing organization ID: " + accessingOrgId
+                        log.debug("Resolved sub-org tenant domain: " + subOrgTenantDomain
                                 + " for tenant-qualified org context: " + contextToForward);
                     }
                     break;
@@ -226,22 +212,8 @@ public class TenantContextRewriteValve extends ValveBase {
                         isOrgQualifiedPathFlow = true;
                         effectiveTenantDomain = subOrgTenantDomain;
                         urlTenantDomain = tenantDomainFromUrl;
-                        PrivilegedCarbonContext.startTenantFlow();
-                        try {
-                            PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                    .setTenantDomain(subOrgTenantDomain, true);
-                            PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                    .setApplicationResidentOrganizationId(accessingOrgId);
-                            PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                                    .setAccessingOrganizationId(accessingOrgId);
-                        } catch (RuntimeException e) {
-                            PrivilegedCarbonContext.endTenantFlow();
-                            isOrgQualifiedPathFlow = false;
-                            throw e;
-                        }
                         if (log.isDebugEnabled()) {
-                            log.debug("Set sub-org tenant domain: " + subOrgTenantDomain
-                                    + " and accessing organization ID: " + accessingOrgId
+                            log.debug("Resolved sub-org tenant domain: " + subOrgTenantDomain
                                     + " for tenant-qualified org context: " + contextToForward);
                         }
                         break orgQualifiedPathsOuterLoop;
@@ -250,8 +222,12 @@ public class TenantContextRewriteValve extends ValveBase {
             }
         }
 
-        String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
         try {
+            if (isOrgQualifiedPathFlow) {
+                PrivilegedCarbonContext.startTenantFlow();
+                PrivilegedCarbonContext.getThreadLocalCarbonContext().setTenantDomain(effectiveTenantDomain, true);
+            }
+            String tenantDomain = PrivilegedCarbonContext.getThreadLocalCarbonContext().getTenantDomain();
             MDC.put(TENANT_DOMAIN, tenantDomain);
             MDC.put(TENANT_ID, String.valueOf(IdentityTenantUtil.getTenantId(tenantDomain)));
             //request URI is not a rewrite one
@@ -316,16 +292,16 @@ public class TenantContextRewriteValve extends ValveBase {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating tenant domain.", ex);
             }
-            handleInvalidTenantDomainErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, tenantDomain);
+            handleInvalidTenantDomainErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, contextTenantDomain);
         } catch (IdentityRuntimeException e) {
             if (log.isDebugEnabled()) {
                 log.debug("Error occurred while validating tenant domain.", e);
             }
             String INVALID_TENANT_DOMAIN = "Invalid tenant domain";
             if (!StringUtils.isBlank(e.getMessage()) && e.getMessage().contains(INVALID_TENANT_DOMAIN)) {
-                handleInvalidTenantDomainErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, tenantDomain);
+                handleInvalidTenantDomainErrorResponse(response, HttpServletResponse.SC_NOT_FOUND, contextTenantDomain);
             } else {
-                handleRuntimeErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, tenantDomain);
+                handleRuntimeErrorResponse(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, contextTenantDomain);
             }
         } finally {
             IdentityUtil.threadLocalProperties.get().remove(TENANT_NAME_FROM_CONTEXT);
