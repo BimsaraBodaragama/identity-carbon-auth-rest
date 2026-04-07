@@ -188,7 +188,6 @@ public class TenantContextRewriteValve extends ValveBase {
                         }
                         return;
                     }
-                    isOrgQualifiedPathFlow = true;
                     effectiveTenantDomain = subOrgTenantDomain;
                     urlTenantDomain = tenantDomainFromUrl;
                     PrivilegedCarbonContext.startTenantFlow();
@@ -197,6 +196,7 @@ public class TenantContextRewriteValve extends ValveBase {
                     PrivilegedCarbonContext.getThreadLocalCarbonContext()
                             .setApplicationResidentOrganizationId(accessingOrgId);
                     PrivilegedCarbonContext.getThreadLocalCarbonContext().setAccessingOrganizationId(accessingOrgId);
+                    isOrgQualifiedPathFlow = true;
                     if (log.isDebugEnabled()) {
                         log.debug("Set sub-org tenant domain: " + subOrgTenantDomain
                                 + " and accessing organization ID: " + accessingOrgId
@@ -216,7 +216,6 @@ public class TenantContextRewriteValve extends ValveBase {
                         if (subOrgTenantDomain == null) {
                             return;
                         }
-                        isOrgQualifiedPathFlow = true;
                         effectiveTenantDomain = subOrgTenantDomain;
                         urlTenantDomain = tenantDomainFromUrl;
                         PrivilegedCarbonContext.startTenantFlow();
@@ -226,6 +225,7 @@ public class TenantContextRewriteValve extends ValveBase {
                                 .setApplicationResidentOrganizationId(accessingOrgId);
                         PrivilegedCarbonContext.getThreadLocalCarbonContext()
                                 .setAccessingOrganizationId(accessingOrgId);
+                        isOrgQualifiedPathFlow = true;
                         if (log.isDebugEnabled()) {
                             log.debug("Set sub-org tenant domain: " + subOrgTenantDomain
                                     + " and accessing organization ID: " + accessingOrgId
