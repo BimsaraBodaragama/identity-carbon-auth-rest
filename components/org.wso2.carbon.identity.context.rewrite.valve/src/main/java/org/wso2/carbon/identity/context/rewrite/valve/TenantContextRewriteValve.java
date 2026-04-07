@@ -100,7 +100,6 @@ public class TenantContextRewriteValve extends ValveBase {
         boolean isWebApp = false;
         boolean isOrgQualifiedPathFlow = false;
         String effectiveTenantDomain = null;
-        String urlTenantDomain = null;
 
         /* If an organization under the super tenant is accessed with organization qualified URL, it is prefixed
            with super tenant domain qualifier. /o/... -> /t/<carbon.super>/o/... */
@@ -190,7 +189,6 @@ public class TenantContextRewriteValve extends ValveBase {
                     }
                     isOrgQualifiedPathFlow = true;
                     effectiveTenantDomain = subOrgTenantDomain;
-                    urlTenantDomain = tenantDomainFromUrl;
                     PrivilegedCarbonContext.startTenantFlow();
                     PrivilegedCarbonContext.getThreadLocalCarbonContext()
                             .setTenantDomain(subOrgTenantDomain, true);
@@ -218,7 +216,6 @@ public class TenantContextRewriteValve extends ValveBase {
                         }
                         isOrgQualifiedPathFlow = true;
                         effectiveTenantDomain = subOrgTenantDomain;
-                        urlTenantDomain = tenantDomainFromUrl;
                         PrivilegedCarbonContext.startTenantFlow();
                         PrivilegedCarbonContext.getThreadLocalCarbonContext()
                                 .setTenantDomain(subOrgTenantDomain, true);
@@ -289,7 +286,7 @@ public class TenantContextRewriteValve extends ValveBase {
                         requestURI = requestURI.replace(carbonWebContext + "/", "");
                     }
                     //Servlet
-                    requestURI = requestURI.replace("/t/" + (isOrgQualifiedPathFlow ? urlTenantDomain : tenantDomain), "");
+                    requestURI = requestURI.replace("/t/" + tenantDomain, "");
                     String appResidentOrgId =
                             PrivilegedCarbonContext.getThreadLocalCarbonContext()
                                     .getApplicationResidentOrganizationId();
