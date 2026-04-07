@@ -518,15 +518,15 @@ public class TenantContextRewriteValve extends ValveBase {
         List<OrganizationRewriteContext> organizationRewriteContexts = new ArrayList<>();
         Map<String, Object> configuration = IdentityConfigParser.getInstance().getConfiguration();
         Object webAppBasePathContexts = configuration.get(
-                "OrgContextsToRewriteInTenantQualifiedPaths.WebApp.Context.BasePath");
+                "OrgResourceContextsToRewriteInTenantPerspective.WebApp.Context.BasePath");
         setOrganizationRewriteContexts(organizationRewriteContexts, webAppBasePathContexts, true);
 
         Object webAppSubPathContexts = configuration.get(
-                "OrgContextsToRewriteInTenantQualifiedPaths.WebApp.Context.SubPaths.Path");
+                "OrgResourceContextsToRewriteInTenantPerspective.WebApp.Context.SubPaths.Path");
         setSubPathContexts(organizationRewriteContexts, webAppSubPathContexts);
 
         Object servletBasePathContexts = configuration.get(
-                "OrgContextsToRewriteInTenantQualifiedPaths.Servlet.Context");
+                "OrgResourceContextsToRewriteInTenantPerspective.Servlet.Context");
         setOrganizationRewriteContexts(organizationRewriteContexts, servletBasePathContexts, false);
 
         return organizationRewriteContexts;
